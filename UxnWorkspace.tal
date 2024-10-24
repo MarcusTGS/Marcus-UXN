@@ -1,0 +1,114 @@
+( devices )
+|00 @System  [ &vector $2 &pad $6  &r $2 &g $2 &b $2 ]
+|20 @Screen  [ &vector $2 &width $2 &height $2 &pad $2 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1 ]
+|80 @Controller [ &vector $2 &button $1 &key $1 ]
+
+( main program )
+|0100
+      ( set system colors )
+      #2ce9 .System/r DEO2
+      #01c0 .System/g DEO2
+      #2ce5 .System/b DEO2
+      #00f0 .Screen/width DEO2
+      #00f0 .Screen/height DEO2
+
+      ( assign controller vector )
+      ;on-controller .Controller/vector DEO2
+BRK
+
+@on-controller
+      .Controller/key DEI .System/pad DEO
+      ( set sprite address )
+      ;square .Screen/addr DEO2
+
+      .Controller/key DEI LIT "a NEQ
+      ,&escape JCN
+      ;full .Screen/addr DEO2
+      #0000 .Screen/y DEO2
+
+      ( wipe screen 1 per row )
+      &newRow
+        #0000 .Screen/x DEO2
+        .Screen/y DEI2 #0004 ADD2 DUP2
+        .Screen/y DEO2
+        #00 .Screen/sprite DEO
+        #00f0 GTH2
+        ,&escape JCN
+      ( wipe screen 1 pixel at a time )
+
+      &sameRow
+        .Screen/x DEI2 #0004 ADD2 DUP2
+        .Screen/x DEO2
+        #00 .Screen/sprite DEO
+        #00f0 GTH2
+        ,&newRow JCN
+        ,&sameRow JMP
+
+
+      &escape
+
+      ;square .Screen/addr DEO2
+
+      .Screen/y DEI2 #0080 NEQ2 ( if has drawn with 1 end the loop )
+      ,&continue JCN
+      BRK
+
+      &continue
+
+      .Controller/key DEI LIT "1 EQU ( is the key 'q'? )
+      ,&color-1 JCN ( jump to color-1 if that's the case )
+
+      .Controller/key DEI LIT "2 EQU ( is the key 'w'? )
+      ,&color-2 JCN ( jump to color-2 if that's the case )
+
+      .Controller/key DEI LIT "3 EQU ( is the key 'e'? )
+      ,&color-3 JCN ( jump to color-3 if that's the case )
+
+      .Controller/key DEO LIT "space EQU ( is the key 'space'? )
+      ,test JCN
+
+      ( in any other case, finish )
+      BRK
+
+      &color-1
+       ( set  x,y coordinates )
+      #0040 .Screen/x DEO2
+      #0040 .Screen/y DEO2
+
+        ( draw sprite in the background )
+        ( using color 1 for the outline )
+        #01 .Screen/sprite DEO
+      BRK
+
+      &color-2
+       ( set  x,y coordinates )
+      #0080 .Screen/x DEO2
+      #0040 .Screen/y DEO2
+
+        ( draw sprite in the background )
+        ( using color 2 for the outline )
+        #02 .Screen/sprite DEO
+      BRK
+
+      &color-3
+       ( set  x,y coordinates )
+      #00c0 .Screen/x DEO2
+      #0040 .Screen/y DEO2
+
+        ( draw sprite in the background )
+        ( using color 3 for the outline )
+        #03 .Screen/sprite DEO
+      BRK
+BRK
+@test
+ ( set  x,y coordinates )
+      #0080 .Screen/x DEO2
+      #0080 .Screen/y DEO2
+
+      ;fail .Screen/addr DEO2
+      #03 .Screen/sprite DEO
+      BRK
+( sprite )
+@square ff81 8181 8181 81ff
+@fail 8142 2418 1824 4281
+@full ffff ffff ffff ffff
