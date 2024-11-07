@@ -2,22 +2,70 @@
 |00 @System  [ &vector $2 &pad $6  &r $2 &g $2 &b $2 ]
 |20 @Screen  [ &vector $2 &width $2 &height $2 &pad $2 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1 ]
 |80 @Controller [ &vector $2 &button $1 &key $1 ]
+|c0 @DateTime [ &year $2 &month $1 &day $1 &hour $1 &minute $1 &second $1 &dotw $1 &doty $2 &isdst $1 ]
 
+%INC-X { .Screen/x DEI2 #0008 ADD2 .Screen/x DEO2 }
+%DEC-X { .Screen/x DEI2 #0008 SUB2 .Screen/x DEO2 } 
+%INC-Y { .Screen/y DEI2 #0008 ADD2 .Screen/y DEO2 } 
+%DEC-Y { .Screen/y DEI2 #0008 SUB2 .Screen/y DEO2 }
+
+%DRAW { #01 .Screen/sprite DEO } 
+
+%LOOP { .loop/time DEI #01 ADD .loop/time DEO BRK }
+%NEWR { .rand/cur DEI ,Cycle JMP }
+
+
+
+
+@loop [ &pos $2 &time $2 ]
+@pos [ $1 ]
+@rand [ &cur $2 &nxt $2 ]
 ( main program )
 |0100
+
       ( set system colors )
       #2ce9 .System/r DEO2
       #01c0 .System/g DEO2
       #2ce5 .System/b DEO2
-      #00f0 .Screen/width DEO2
-      #00f0 .Screen/height DEO2
+      #00f4 .Screen/width DEO2
+      #00f4 .Screen/height DEO2
 
+      
+      #23 #00 #31 #31 #31 #00 #13 #00 #21 #13 #13 #31 #00 #31 #23 #13 #00 #23 #00 #00 #00 #00 #00 #13 #13 #00 #00 #31 #23 #21 #00 #00 #32 #13 #00 #00 #23 #13 #00 #00 #12 #00 #00 #23 #00 #21 #00 #00 #23 #00 #31 #31 #32 #12 #00 #21 #23 #32 #31 #12 #13 #23 #00 #32 #21 #00 #31 #23 #13 #31 #00 #00 #00 #13 #31 #31 #12 #21 #13 #00 #00 #12 #13 #13 #23 #00 #13 #00 #12 #21 #00 #23 #12 #00 #00 #12 #21 #32 #23 #23 #32 #00 #21 #23 #13 #00 #23 #12 #23 #21 #32 #31 #13 #12 #12 #21 #00 #21 #13 #00 #13 #32 #00 #00 #32 #12 #23 #32 #31 #31 #21 #00 #21 #00 #00 #12 #31 #21 #00 #31 #23 #12 #00 #00 #12 #31 #23 #00 #23 #23 #21 #00 #31 #00 #32 #21 #23 #23 #21 #12 #31 #00 #23 #32 #32 #00 #32 #00 #00 #12 #21 #23 #00 #21 #31 #00 #32 #21 #32 #31 #21 #21 #21 #00 #00 #12 #00 #12 #21 #00 #31 #31 #23 #12 #31 #00 #00 #12 #00 #13 #00 #13 #13 #00 #13 #32 #12 #00 #23 #12 #00 #00 #00 #23 #31 #21 #13 #00 #00 #13 #32 #13 #21 #13 #32 #13 #00 #00 #00 #00 #13 #31 #32 #21 #32 #00 #23 #00 #00 #12 #23 #23 #00 #13 #13 #31 #12 #23 #00 #00 #00 #00 #13 #21 #00 #23
+      .DateTime/second DEI2 .DateTime/minute DEI2 MUL SWP POP
+      @Cycle
+      SWP POP #01 SUB DUP
+      ,Cycle JCN
+      .rand/cur DEO
       ( assign controller vector )
       ;on-controller .Controller/vector DEO2
+      ;on-frame .System/vector DEO2
+
+BRK
+@nowhere
+BRK
+@on-frame 
+  .loop/time DEI #00 EQU ( select a movment )
+  ,&wait JCN
+  NEWR
+  .rand/cur DEI .loop/pos DEO
+  LOOP
+  &wait
+    .loop/time DEI #20 GTH ( not in a movment )
+    LOOP
+  &swaps
+    .loop/pos DEI DUP #01 AND #00 NEQ
+    ,&135sp JCN
+    ,&246sp JMP
+    .loop/time DEI
+    
+    &135sp
+      DUP #10 
+
 BRK
 
 @on-controller
-      .Controller/key DEI .System/pad DEO
+      
       ( set sprite address )
       ;square .Screen/addr DEO2
 
@@ -32,20 +80,23 @@ BRK
         .Screen/y DEI2 #0004 ADD2 DUP2
         .Screen/y DEO2
         #00 .Screen/sprite DEO
-        #00f0 GTH2
-        ,&escape JCN
+        #00f4 GTH2
+        ,&reset JCN
       ( wipe screen 1 pixel at a time )
 
       &sameRow
         .Screen/x DEI2 #0004 ADD2 DUP2
         .Screen/x DEO2
         #00 .Screen/sprite DEO
-        #00f0 GTH2
+        #00f4 GTH2
         ,&newRow JCN
         ,&sameRow JMP
 
+      &reset
+      #0040 .Screen/y DEO
 
-      &escape
+      &escape 
+
 
       ;square .Screen/addr DEO2
 
@@ -55,17 +106,17 @@ BRK
 
       &continue
 
-      .Controller/key DEI LIT "1 EQU ( is the key 'q'? )
+      .Controller/key DEI LIT "1 EQU ( is the key '1'? )
       ,&color-1 JCN ( jump to color-1 if that's the case )
 
-      .Controller/key DEI LIT "2 EQU ( is the key 'w'? )
+      .Controller/key DEI LIT "2 EQU ( is the key '2'? )
       ,&color-2 JCN ( jump to color-2 if that's the case )
 
-      .Controller/key DEI LIT "3 EQU ( is the key 'e'? )
+      .Controller/key DEI LIT "3 EQU ( is the key '3'? )
       ,&color-3 JCN ( jump to color-3 if that's the case )
 
-      .Controller/key DEO LIT "space EQU ( is the key 'space'? )
-      ,test JCN
+      .Controller/key DEI LIT 20 EQU ( is the key space? )
+      ,&fail JCN
 
       ( in any other case, finish )
       BRK
@@ -99,16 +150,21 @@ BRK
         ( using color 3 for the outline )
         #03 .Screen/sprite DEO
       BRK
-BRK
-@test
- ( set  x,y coordinates )
+
+      &fail
+      ;x .Screen/addr DEO2
+      ( set  x,y coordinates )
       #0080 .Screen/x DEO2
       #0080 .Screen/y DEO2
 
-      ;fail .Screen/addr DEO2
-      #03 .Screen/sprite DEO
+
+        #03 .Screen/sprite DEO
       BRK
-( sprite )
+  POP
+BRK
+
+
+( sprites )
 @square ff81 8181 8181 81ff
-@fail 8142 2418 1824 4281
+@x 8142 2418 1824 4281
 @full ffff ffff ffff ffff
